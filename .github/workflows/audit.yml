@@ -1,0 +1,45 @@
+name: Auditoria Estatica IEEE 1028
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  auditoria-estatica:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout del código
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      # 2. Configurar PowerShell (disponible en ubuntu-latest como pwsh)
+      - name: Verificar PowerShell
+        run: pwsh --version
+
+      # 3. Ejecutar script de auditoría estática
+      - name: Ejecutar Auditoría Estática
+        run: pwsh -File ./audit-script.ps1 -SourcePath ./DemoAuditApp -ReportOutput ./audit-report-auto.txt
+
+      # 4. Mostrar el reporte en el log del pipeline
+      - name: Mostrar Reporte de Auditoría
+        if: always()
+        run: cat ./audit-report-auto.txt
+
+      # 5. Guardar el reporte como artefacto descargable
+      - name: Guardar Reporte como Artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-auditoria
+          path: ./audit-report-auto.txt
+
+      # 6. Falla el pipeline si el script retornó exit code 1
+      - name: Verificar resultado de auditoría
+        run: |
+          if [ $? -ne 0 ]; then
+            echo "La auditoría falló. El merge está bloqueado."
+            exit 1
+          fi
